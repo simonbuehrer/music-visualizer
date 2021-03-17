@@ -1,49 +1,48 @@
-
 /*
-Copyright (c) 2020 Simon J. Bührer
+  fft.ino
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-
-
-#include <arduinoFFT.h>
+  @author: Simon J. Buehrer
+  @date: 16.03.2021
+  
+  Copyright (c) 2020 Simon J. Buehrer
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+ */
+ 
+#include <arduinoFFT.h> //
 #include <Adafruit_NeoPixel.h>
-#include <SPI.h>
 
-#define SAMPLES 128            //Must be a power of 2
-
-#define LED_PIN 4
-#define LED_COUNT 9
+#define SAMPLES 128  // The FFT resolution (must be a power of 2)
+#define LED_PIN 4    // LED pin  to communicate with the LED
+#define LED_COUNT 9  // number of LED's used (= Total amount/3 for WS2811)
 
 
-//fft var
+
 double vReal[SAMPLES];
 double vImag[SAMPLES];
 
 
 //Moving average stuff
-const int numadress  = 5;
-const int numReadings  = 20;
+#define numadress  5  // number of moving averages to calculate
+#define numReadings  15  // moving average length
 int readings [numadress][numReadings];
 int readIndex[numadress];
 long total[numadress];
 
-
-
+//Define Objects
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 arduinoFFT FFT = arduinoFFT();  // FFT object
 
@@ -53,9 +52,10 @@ void setup() {
   strip.show(); // Initialize all pixels to 'off'
 
   Serial.begin(9600);
-  ADCSRA = 0b11100101;      // set ADC to free running mode and set pre-scalar to 32 (0xe5)
-  ADMUX = 0b00000000;       // use pin A0 and external voltage reference
+  ADCSRA = 0b11100101;  // set ADC to free running mode and set pre-scalar to 32 (0xe5)
+  ADMUX = 0b00000000;   // use pin A0 and external voltage reference
   delay(50);            // wait to get reference voltage stabilized
+
 }
 
 void loop() {
@@ -113,25 +113,28 @@ void loop() {
     energy[4] += vReal[i];
   } energy[4] = energy[4] / 2;
 
-  int peaks[6];
+
   int average_energy[5];
+  int varity[5];
   for (int i = 0; i < 5; i++) {
     average_energy[i] = smooth(energy[i], i);
-    average_energy[i] = energy[i] - average_energy[i];
-    average_energy[i] = constrain(average_energy[i] - 20, 0, 5000);
-    average_energy[i] = map(average_energy[i], 0, 5000, 0, 255);
+    varity[i] = energy[i] - average_energy[i];
 
-    Serial.print(average_energy[i]);
+    average_energy[i] = constrain(average_energy[i] -150, 0, 1800);
+    average_energy[i] = map(average_energy[i], 0, 1800, 0, 1023);
+    //Serial.print(average_energy[i]);
+    //Serial.print(",");
+
+    varity[i] = constrain(varity[i] - 20, 0, 2000);
+    varity[i] = map(varity[i], 0, 2000, 0, 1023);
+    Serial.print(peaks[i]);
     Serial.print(",");
 
-
-    peaks[i] = peaks[i] - 8;
-    peaks[i] = (peaks[i] <= average_energy[i]) ? average_energy[i] : peaks[i] ;
-    strip.setPixelColor(i,  peaks[i], peaks[i], peaks[i]);
-    strip.show();
+    //strip.setPixelColor(i,  peaks[i], peaks[i], peaks[i]);
+    //strip.show();
 
   }
-  Serial.println();
+  Serial.println(sizeof(int));
 
 
 }
